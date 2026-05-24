@@ -19,6 +19,7 @@ interface CalendarEntry {
   entry: BasesEntry;
   startDate: Date;
   endDate?: Date;
+  title: string;
 }
 
 export class CalendarView extends BasesView {
@@ -32,6 +33,7 @@ export class CalendarView extends BasesView {
   private entries: CalendarEntry[] = [];
   private startDateProp: BasesPropertyId | null = null;
   private endDateProp: BasesPropertyId | null = null;
+  private titleProp: BasesPropertyId | null = null;
   private weekStartDay: number = 1;
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
@@ -73,6 +75,7 @@ export class CalendarView extends BasesView {
   private loadConfig(): void {
     this.startDateProp = this.config.getAsPropertyId("startDate");
     this.endDateProp = this.config.getAsPropertyId("endDate");
+    this.titleProp = this.config.getAsPropertyId("title");
     const weekStartDayValue = this.config.get("weekStartDay") as string;
 
     const dayNameToNumber: Record<string, number> = {
@@ -107,11 +110,10 @@ export class CalendarView extends BasesView {
         const endDate = this.endDateProp
           ? (this.extractDate(entry, this.endDateProp) ?? undefined)
           : undefined;
-        this.entries.push({
-          entry,
-          startDate,
-          endDate,
-        });
+        const title =
+          (this.titleProp ? this.extractTitle(entry, this.titleProp) : null) ??
+          entry.file.basename;
+        this.entries.push({ entry, startDate, endDate, title });
       }
     }
 
@@ -162,6 +164,17 @@ export class CalendarView extends BasesView {
     if (endDateProperty.type !== "note") return false;
 
     return true;
+  }
+
+  private extractTitle(entry: BasesEntry, propId: BasesPropertyId): string | undefined {
+    try {
+      const value = entry.getValue(propId);
+      if (!value || !value.isTruthy()) return undefined;
+      const str = value.toString().trim();
+      return str.length > 0 ? str : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private extractDate(entry: BasesEntry, propId: BasesPropertyId): Date | null {
@@ -263,6 +276,18 @@ export class CalendarView extends BasesView {
             displayName: "End date (optional)",
             type: "property",
             key: "endDate",
+            placeholder: "Property",
+          },
+        ],
+      },
+      {
+        displayName: "Display",
+        type: "group",
+        items: [
+          {
+            displayName: "Title (optional)",
+            type: "property",
+            key: "title",
             placeholder: "Property",
           },
         ],

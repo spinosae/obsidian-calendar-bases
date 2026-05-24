@@ -91,13 +91,14 @@ export const CalendarReactView: React.FC<CalendarReactViewProps> = ({
 
     return {
       id: calEntry.entry.file.path,
-      title: calEntry.entry.file.basename,
+      title: calEntry.title,
       start: calEntry.startDate,
       end: adjustedEndDate,
       allDay: true,
       extendedProps: {
         entry: calEntry.entry,
-        originalEndDate: calEntry.endDate, // Keep track of original end date for drag operations
+        title: calEntry.title,
+        originalEndDate: calEntry.endDate,
       },
     };
   });
@@ -276,47 +277,32 @@ export const CalendarReactView: React.FC<CalendarReactViewProps> = ({
       if (!app) return null;
 
       const entry = eventInfo.event.extendedProps.entry as BasesEntry;
-      const validProperties: { propertyId: BasesPropertyId; value: Value }[] =
-        [];
+      const title = eventInfo.event.extendedProps.title as string;
+
+      const subProperties: { propertyId: BasesPropertyId; value: Value }[] = [];
       for (const prop of properties) {
         const value = tryGetValue(entry, prop);
         if (value && hasNonEmptyValue(value)) {
-          validProperties.push({ propertyId: prop, value });
+          subProperties.push({ propertyId: prop, value });
         }
       }
 
-      if (validProperties.length > 0) {
-        const firstProperty = validProperties[0];
-        const remainingProperties = validProperties.slice(1);
-
-        return (
-          <div className="bases-calendar-event-content">
-            <div className="bases-calendar-event-title">
-              <PropertyValue value={firstProperty.value} />
+      return (
+        <div className="bases-calendar-event-content">
+          <div className="bases-calendar-event-title">{title}</div>
+          {subProperties.length > 0 && (
+            <div className="bases-calendar-event-properties">
+              {subProperties.map(({ propertyId: prop, value }) => (
+                <div key={prop} className="bases-calendar-event-property">
+                  <span className="bases-calendar-event-property-value">
+                    <PropertyValue value={value} />
+                  </span>
+                </div>
+              ))}
             </div>
-            {remainingProperties.length > 0 && (
-              <div className="bases-calendar-event-properties">
-                {remainingProperties.map(({ propertyId: prop, value }) => (
-                  <div key={prop} className="bases-calendar-event-property">
-                    <span className="bases-calendar-event-property-value">
-                      <PropertyValue value={value} />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      } else {
-        // Fallback to file basename if no properties
-        return (
-          <div className="bases-calendar-event-content">
-            <div className="bases-calendar-event-title">
-              {entry.file.basename}
-            </div>
-          </div>
-        );
-      }
+          )}
+        </div>
+      );
     },
     [properties, app, hasNonEmptyValue],
   );
@@ -354,6 +340,7 @@ interface CalendarEntry {
   entry: BasesEntry;
   startDate: Date;
   endDate?: Date;
+  title: string;
 }
 
 function tryGetValue(entry: BasesEntry, propId: BasesPropertyId): Value | null {
